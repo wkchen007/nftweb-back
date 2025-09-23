@@ -1,0 +1,26 @@
+# Ignore git
+.git
+.gitignore
+
+# Ignore docs and configs not needed inside image
+README.md
+LICENSE
+
+# Ignore local env files
+.env
+
+# Ignore editor settings
+.vscode
+.idea
+
+# Ignore build outputs
+bin/
+build/
+dist/
+out/
+
+# Ignore docker-compose (只需要 Dockerfile)
+docker-compose*.yml
+
+# Ignore postgres data
+postgres-data

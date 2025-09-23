@@ -1,0 +1,33 @@
+# Go build artifacts
+/bin/
+/build/
+/dist/
+/out/
+/*.exe
+/*.dll
+/*.so
+/*.dylib
+*.test
+*.out
+
+# Go module cache / vendor
+/vendor/
+/go.sum
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Environment variables
+.env
+
+# Docker
+docker-compose.override.yml
+
+# Ignore postgres data
+postgres-data/
