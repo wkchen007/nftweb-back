@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/wkchen007/nftweb-back/internal/ethcli"
 )
 
 // /healthz handler
@@ -26,4 +28,38 @@ func (app *application) Home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = app.writeJSON(w, http.StatusOK, payload)
+}
+
+func (app *application) GetWalletAddress(w http.ResponseWriter, r *http.Request) {
+	fromAddr := app.ethClient.GetAddress()
+
+	_ = app.writeJSON(w, http.StatusOK, fromAddr)
+}
+
+func (app *application) GetWalletBalance(w http.ResponseWriter, r *http.Request) {
+	wallet, err := app.ethClient.GetBalance()
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadGateway)
+		return
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, wallet)
+}
+
+func (app *application) PostWalletTransfer(w http.ResponseWriter, r *http.Request) {
+	var req ethcli.TransferRequest
+	err := app.readJSON(w, r, &req)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	log.Printf("[http] transfer request: %+v", req)
+
+	txRes, err := app.ethClient.TransferETH(req)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadGateway)
+		return
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, txRes)
 }

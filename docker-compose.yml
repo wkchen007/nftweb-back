@@ -4,6 +4,8 @@ services:
     container_name: goapp
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8080/healthz" ]
       interval: 10s

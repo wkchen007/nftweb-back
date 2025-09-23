@@ -17,5 +17,11 @@ func (app *application) routes() http.Handler {
 	mux.Get("/", app.Home)
 	mux.Get("/healthz", app.healthzHandler)
 
+	mux.Route("/wallet", func(mux chi.Router) {
+		mux.Get("/address", app.GetWalletAddress)
+		mux.Get("/balance", app.GetWalletBalance)
+		mux.Post("/transfer", app.PostWalletTransfer)
+	})
+
 	return mux
 }
