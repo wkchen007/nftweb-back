@@ -74,7 +74,7 @@ func (c *Client) GetBalance() (Wallet, error) {
 	wallet := Wallet{
 		Address:    c.from.Hex(),
 		Balance:    balWei.String(),
-		BalanceEth: WeiToEtherString(balWei),
+		BalanceEth: c.WeiToEtherString(balWei),
 		Network:    c.network,
 	}
 
@@ -83,12 +83,12 @@ func (c *Client) GetBalance() (Wallet, error) {
 
 func (c *Client) TransferETH(req TransferRequest) (TransferResponse, error) {
 	toStr := strings.TrimSpace(req.To)
-	if !IsHexAddress(toStr) {
+	if !c.IsHexAddress(toStr) {
 		return TransferResponse{}, fmt.Errorf("invalid 'to' address")
 	}
-	to := GethHexToAddress(toStr)
+	to := c.GethHexToAddress(toStr)
 
-	amountWei, err := AmountToWei(strings.TrimSpace(req.AmountEther))
+	amountWei, err := c.AmountToWei(strings.TrimSpace(req.AmountEther))
 	if err != nil {
 		return TransferResponse{}, err
 	}
@@ -153,7 +153,7 @@ func (c *Client) TransferETH(req TransferRequest) (TransferResponse, error) {
 		From:        c.from.Hex(),
 		To:          to.Hex(),
 		ValueWei:    amountWei.String(),
-		ValueEther:  WeiToEtherString(amountWei),
+		ValueEther:  c.WeiToEtherString(amountWei),
 		TxHash:      signed.Hash().Hex(),
 		Network:     c.network,
 		ExplorerUrl: c.BuildTxURL(signed.Hash().Hex()),

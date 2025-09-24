@@ -10,6 +10,7 @@ type Config struct {
 	NFT struct {
 		ContractAddress string `yaml:"contractAddress"`
 		ABIPath         string `yaml:"abiPath"`
+		MaxScanTokenID  int64  `yaml:"maxScanTokenID"`
 	} `yaml:"nft"`
 }
 

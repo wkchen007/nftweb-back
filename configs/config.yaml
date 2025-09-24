@@ -1,3 +1,4 @@
 nft:
   contractAddress: "0x6b25Da7311E659aEd25bB7A6d9397b8c88173Ed1"
   abiPath: "configs/nftABI.json"
+  maxScanTokenID: 9

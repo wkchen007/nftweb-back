@@ -51,7 +51,6 @@ func main() {
 		log.Fatalf("cannot create eth client: %v", err)
 	}
 	defer ethc.Close()
-
 	app.ethClient = ethc
 
 	// 建立 NFT 服務(封裝在 internal/nft)
@@ -59,8 +58,8 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to create nft service:", err)
 	}
-
 	app.nft = nft.NewHandlers(svc)
+	log.Print("[nft] service created")
 
 	// 啟動 HTTP server
 	log.Printf("Listening on http://0.0.0.0%s\n", app.httpAddr)

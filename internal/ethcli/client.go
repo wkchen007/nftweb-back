@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	gethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -88,22 +89,39 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func WeiToEtherString(wei *big.Int) string {
+func (c *Client) NewTransactor(ctx context.Context) (*bind.TransactOpts, error) {
+	opts, err := bind.NewKeyedTransactorWithChainID(c.privKey, c.chainID)
+	if err != nil {
+		return nil, err
+	}
+	// 極簡策略：
+	// - 不手動設 Nonce（讓 bind 自動抓 pending nonce）
+	// - 不手動設 GasPrice / GasTipCap / GasFeeCap（讓 bind 自動 Suggest）
+	// - 不手動設 GasLimit（讓 bind 自動 EstimateGas）
+	opts.Context = ctx
+	return opts, nil
+}
+
+func (c *Client) Backend() *ethclient.Client {
+	return c.backend
+}
+
+func (c *Client) WeiToEtherString(wei *big.Int) string {
 	// ether = wei / 1e18，以 18 位小數輸出
 	num := new(big.Rat).SetInt(wei)
 	den := new(big.Rat).SetInt(new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil))
 	return new(big.Rat).Quo(num, den).FloatString(18)
 }
 
-func IsHexAddress(s string) bool {
+func (c *Client) IsHexAddress(s string) bool {
 	return gethcommon.IsHexAddress(s)
 }
 
-func GethHexToAddress(s string) gethcommon.Address {
+func (c *Client) GethHexToAddress(s string) gethcommon.Address {
 	return gethcommon.HexToAddress(s)
 }
 
-func AmountToWei(amountEthStr string) (*big.Int, error) {
+func (c *Client) AmountToWei(amountEthStr string) (*big.Int, error) {
 	oneEthWei := new(big.Int).Exp(big.NewInt(10), big.NewInt(18), nil)
 
 	if amountEthStr != "" {
