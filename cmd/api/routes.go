@@ -23,5 +23,9 @@ func (app *application) routes() http.Handler {
 		mux.Post("/transfer", app.PostWalletTransfer)
 	})
 
+	mux.Route("/nft", func(mux chi.Router) {
+		mux.Post("/ownerOf", app.nft.OwnerOfHandler)
+	})
+
 	return mux
 }
