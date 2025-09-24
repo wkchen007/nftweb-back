@@ -75,3 +75,37 @@ func (h *Handlers) Mint(w http.ResponseWriter, r *http.Request) {
 
 	h.writeJSON(w, http.StatusOK, resp)
 }
+
+type TokensOfOwnerRequest struct {
+	Owner           string `json:"owner"`
+	IncludeTokenURI bool   `json:"includeTokenURI,omitempty"` // 是否同時查 tokenURI
+}
+
+type TokenItem struct {
+	TokenID  string `json:"tokenId"`
+	TokenURI string `json:"tokenURI,omitempty"`
+}
+
+type TokensOfOwnerResponse struct {
+	Owner  string      `json:"owner"`
+	Count  int         `json:"count"`
+	Tokens []TokenItem `json:"tokens"`
+}
+
+func (h *Handlers) TokensOfOwner(w http.ResponseWriter, r *http.Request) {
+	var req TokensOfOwnerRequest
+	err := h.readJSON(w, r, &req)
+	if err != nil {
+		h.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	log.Printf("[nft] TokensOfOwner request: %+v", req)
+
+	resp, err := h.svc.TokensOfOwner(req)
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("tokensOfOwner failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}

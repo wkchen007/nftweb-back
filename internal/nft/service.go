@@ -142,3 +142,116 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 		Contract: req.Contract,
 	}, nil
 }
+
+// Counter 讀取合約的 counter()，通常代表已鑄出的數量上限（或已經 mint 的總數）
+func (s *Service) Counter() (*big.Int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	backend := s.client.Backend()
+	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
+
+	var out []interface{}
+	if err := bound.Call(&bind.CallOpts{Context: ctx}, &out, "counter"); err != nil {
+		return nil, fmt.Errorf("counter call failed: %w", err)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("counter returned no result")
+	}
+
+	switch v := out[0].(type) {
+	case *big.Int:
+		return v, nil
+	case big.Int:
+		return new(big.Int).Set(&v), nil
+	default:
+		return nil, fmt.Errorf("unexpected counter return type: %T", out[0])
+	}
+}
+
+// TokenURI 讀取合約指定 tokenId 的 tokenURI
+func (s *Service) TokenURI(tokenID *big.Int) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	backend := s.client.Backend()
+	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
+
+	var out []interface{}
+	if err := bound.Call(&bind.CallOpts{Context: ctx}, &out, "tokenURI", tokenID); err != nil {
+		return "", fmt.Errorf("tokenURI call failed: %w", err)
+	}
+	if len(out) == 0 {
+		return "", fmt.Errorf("tokenURI returned no result")
+	}
+
+	uri, ok := out[0].(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected tokenURI return type: %T", out[0])
+	}
+	return uri, nil
+}
+
+// TokensOfOwner 線性掃描 ownerOf 取得某地址擁有的 tokenIds（因合約未提供 Enumerable）。
+// maxScan<=0 時，優先使用 config.NFT.MaxScanTokenID；若也未設定，預設 1000。
+func (s *Service) TokensOfOwner(req TokensOfOwnerRequest) (TokensOfOwnerResponse, error) {
+	if !gethcommon.IsHexAddress(req.Owner) {
+		return TokensOfOwnerResponse{}, fmt.Errorf("invalid address")
+	}
+	owner := gethcommon.HexToAddress(req.Owner)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	backend := s.client.Backend()
+	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
+
+	// 1. 先問合約目前的 counter
+	total, err := s.Counter()
+	if err != nil {
+		return TokensOfOwnerResponse{}, fmt.Errorf("get counter: %w", err)
+	}
+
+	// 2. 線性掃描 ownerOf
+	ids := []*big.Int{}
+	for i := int64(0); i <= total.Int64(); i++ {
+		tokenID := big.NewInt(i)
+
+		var out []interface{}
+		if err := bound.Call(&bind.CallOpts{Context: ctx}, &out, "ownerOf", tokenID); err != nil {
+			// token 尚未被 mint，會 revert → 忽略錯誤繼續
+			continue
+		}
+		if len(out) == 0 {
+			continue
+		}
+		addr, ok := out[0].(gethcommon.Address)
+		if !ok {
+			continue
+		}
+		if addr == owner {
+			ids = append(ids, tokenID)
+		}
+	}
+	log.Printf("[nft] TokensOfOwner found tokens: %+v owned by %s", ids, owner.Hex())
+
+	//3.找尋TokenURI（如果需要）
+	items := make([]TokenItem, 0, len(ids))
+	if req.IncludeTokenURI {
+		for _, id := range ids {
+			uri, _ := s.TokenURI(id) // 單筆失敗就留空
+			items = append(items, TokenItem{TokenID: id.String(), TokenURI: uri})
+		}
+	} else {
+		for _, id := range ids {
+			items = append(items, TokenItem{TokenID: id.String()})
+		}
+	}
+
+	resp := TokensOfOwnerResponse{
+		Owner:  owner.Hex(),
+		Count:  len(items),
+		Tokens: items,
+	}
+	return resp, nil
+}

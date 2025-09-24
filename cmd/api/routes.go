@@ -26,6 +26,7 @@ func (app *application) routes() http.Handler {
 	mux.Route("/nft", func(mux chi.Router) {
 		mux.Post("/OwnerOf", app.nft.OwnerOf)
 		mux.Post("/Mint", app.nft.Mint)
+		mux.Post("/TokensOfOwner", app.nft.TokensOfOwner)
 	})
 
 	return mux
