@@ -1,6 +1,7 @@
 package nft
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -13,6 +14,7 @@ type Service struct {
 	client   *ethcli.Client
 	abi      abi.ABI
 	contract gethcommon.Address
+	config   *Config
 }
 
 func loadABIFromFile(path string) (abi.ABI, error) {
@@ -23,7 +25,21 @@ func loadABIFromFile(path string) (abi.ABI, error) {
 	return abi.JSON(strings.NewReader(string(b)))
 }
 
-func NewService(client *ethcli.Client, abiPath, contractAddr string) (*Service, error) {
+func NewServiceFromConfig(client *ethcli.Client, cfg *Config) (*Service, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("nil config")
+	}
+	return NewServiceWithABIPath(client, cfg.NFT.ABIPath, cfg.NFT.ContractAddress, cfg)
+}
+
+// NewServiceWithABIPath：顯式指定 ABI 路徑與合約地址（方便測試）
+func NewServiceWithABIPath(client *ethcli.Client, abiPath, contractAddr string, cfg *Config) (*Service, error) {
+	if strings.TrimSpace(abiPath) == "" {
+		return nil, fmt.Errorf("abiPath is empty")
+	}
+	if !gethcommon.IsHexAddress(contractAddr) {
+		return nil, fmt.Errorf("invalid contract address")
+	}
 	parsed, err := loadABIFromFile(abiPath)
 	if err != nil {
 		return nil, err
@@ -32,5 +48,6 @@ func NewService(client *ethcli.Client, abiPath, contractAddr string) (*Service, 
 		client:   client,
 		abi:      parsed,
 		contract: gethcommon.HexToAddress(contractAddr),
+		config:   cfg,
 	}, nil
 }

@@ -6,6 +6,9 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - CONFIG_PATH=configs/config.yaml
+      - HTTP_ADDR=:8080
     healthcheck:
       test: [ "CMD", "wget", "-qO-", "http://localhost:8080/healthz" ]
       interval: 10s

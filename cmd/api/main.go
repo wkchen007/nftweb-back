@@ -19,12 +19,30 @@ type application struct {
 
 func main() {
 	var app application
-	var err error
-	flag.StringVar(&app.httpAddr, "httpAddr", ":8080", "HTTP network address")
+
+	// 載入 .env 檔案
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, skip loading")
+	}
+
+	// 讀取 HTTP 監聽位址，預設 :8080
+	defaultAddr := os.Getenv("HTTP_ADDR")
+	if defaultAddr == "" {
+		defaultAddr = ":8080"
+	}
+	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
 	flag.Parse()
 
-	if err = godotenv.Load(); err != nil {
-		log.Println("No .env file found, skip loading")
+	// 從環境變數讀設定檔路徑，預設用 configs/config.yaml
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "configs/config.yaml"
+	}
+
+	// 載入NFT設定檔
+	cfg, err := nft.LoadConfig(configPath)
+	if err != nil {
+		log.Fatal("failed to load config:", err)
 	}
 
 	// 建立以太連線(封裝在 internal/ethcli)
@@ -37,15 +55,16 @@ func main() {
 	app.ethClient = ethc
 
 	// 建立 NFT 服務(封裝在 internal/nft)
-	svc, err := nft.NewService(ethc, "internal/nft/nftABI.json", os.Getenv("CONTRACT_ADDRESS"))
+	svc, err := nft.NewServiceFromConfig(ethc, cfg)
 	if err != nil {
-		log.Fatalf("cannot create nft service: %v", err)
+		log.Fatal("failed to create nft service:", err)
 	}
+
 	app.nft = nft.NewHandlers(svc)
 
 	// 啟動 HTTP server
-	log.Printf("HTTP server listening on %s ...", app.httpAddr)
-	if err = http.ListenAndServe(app.httpAddr, app.routes()); err != nil {
-		log.Fatal(err)
+	log.Printf("Listening on http://0.0.0.0%s\n", app.httpAddr)
+	if err := http.ListenAndServe(app.httpAddr, app.routes()); err != nil {
+		log.Fatal("failed to start server:", err)
 	}
 }

@@ -18,7 +18,11 @@ FROM alpine:3.20
 RUN adduser -D -H appuser
 USER appuser
 
+WORKDIR /app
 COPY --from=builder /bin/goapp /bin/goapp
+
+# 複製 configs
+COPY configs/ ./configs/
 
 EXPOSE 8080
 
