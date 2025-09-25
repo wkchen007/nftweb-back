@@ -38,6 +38,15 @@ type TransferResponse struct {
 	ExplorerUrl string `json:"explorerUrl"`
 }
 
+type UseSignerRequest struct {
+	PrivateKey string `json:"privateKey"`
+}
+
+type UseSignerResponse struct {
+	Address string `json:"address"`
+	Network string `json:"network"`
+}
+
 func (c *Client) BuildTxURL(hash string) string {
 	base := "https://etherscan.io"
 	switch c.chainID.Int64() {
@@ -74,7 +83,7 @@ func (c *Client) GetBalance() (Wallet, error) {
 	wallet := Wallet{
 		Address:    c.from.Hex(),
 		Balance:    balWei.String(),
-		BalanceEth: c.WeiToEtherString(balWei),
+		BalanceEth: WeiToEtherString(balWei),
 		Network:    c.network,
 	}
 
@@ -83,12 +92,12 @@ func (c *Client) GetBalance() (Wallet, error) {
 
 func (c *Client) TransferETH(req TransferRequest) (TransferResponse, error) {
 	toStr := strings.TrimSpace(req.To)
-	if !c.IsHexAddress(toStr) {
+	if !IsHexAddress(toStr) {
 		return TransferResponse{}, fmt.Errorf("invalid 'to' address")
 	}
-	to := c.GethHexToAddress(toStr)
+	to := GethHexToAddress(toStr)
 
-	amountWei, err := c.AmountToWei(strings.TrimSpace(req.AmountEther))
+	amountWei, err := AmountToWei(strings.TrimSpace(req.AmountEther))
 	if err != nil {
 		return TransferResponse{}, err
 	}
@@ -153,7 +162,7 @@ func (c *Client) TransferETH(req TransferRequest) (TransferResponse, error) {
 		From:        c.from.Hex(),
 		To:          to.Hex(),
 		ValueWei:    amountWei.String(),
-		ValueEther:  c.WeiToEtherString(amountWei),
+		ValueEther:  WeiToEtherString(amountWei),
 		TxHash:      signed.Hash().Hex(),
 		Network:     c.network,
 		ExplorerUrl: c.BuildTxURL(signed.Hash().Hex()),

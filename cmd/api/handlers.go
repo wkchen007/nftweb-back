@@ -63,3 +63,26 @@ func (app *application) PostWalletTransfer(w http.ResponseWriter, r *http.Reques
 
 	_ = app.writeJSON(w, http.StatusOK, txRes)
 }
+
+func (app *application) PostWalletUseSigner(w http.ResponseWriter, r *http.Request) {
+	var req ethcli.UseSignerRequest
+	err := app.readJSON(w, r, &req)
+	if err != nil {
+		app.errorJSON(w, err, http.StatusBadRequest)
+		return
+	}
+	log.Printf("[http] useSigner request: %+v", req)
+
+	// 切換 signer（會更新 from/chainID/network）
+	if err := app.ethClient.UseSigner(req); err != nil {
+		app.errorJSON(w, err, http.StatusBadGateway)
+		return
+	}
+
+	resp := ethcli.UseSignerResponse{
+		Address: app.ethClient.From().Hex(),
+		Network: app.ethClient.Network(),
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, resp)
+}

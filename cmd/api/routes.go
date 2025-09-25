@@ -18,15 +18,16 @@ func (app *application) routes() http.Handler {
 	mux.Get("/healthz", app.healthzHandler)
 
 	mux.Route("/wallet", func(mux chi.Router) {
+		mux.Post("/useSigner", app.PostWalletUseSigner)
 		mux.Get("/address", app.GetWalletAddress)
 		mux.Get("/balance", app.GetWalletBalance)
 		mux.Post("/transfer", app.PostWalletTransfer)
 	})
 
 	mux.Route("/nft", func(mux chi.Router) {
-		mux.Post("/OwnerOf", app.nft.OwnerOf)
-		mux.Post("/Mint", app.nft.Mint)
-		mux.Post("/TokensOfOwner", app.nft.TokensOfOwner)
+		mux.Post("/ownerOf", app.nft.OwnerOf)
+		mux.Post("/mint", app.nft.Mint)
+		mux.Post("/tokensOfOwner", app.nft.TokensOfOwner)
 	})
 
 	return mux

@@ -46,7 +46,7 @@ func main() {
 	}
 
 	// 建立以太連線(封裝在 internal/ethcli)
-	ethc, err := ethcli.NewWithSigner(os.Getenv("RPC_URL"), os.Getenv("privKey"))
+	ethc, err := ethcli.New(os.Getenv("RPC_URL"))
 	if err != nil {
 		log.Fatalf("cannot create eth client: %v", err)
 	}

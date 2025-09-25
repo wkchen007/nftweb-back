@@ -97,17 +97,17 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 		return MintResponse{}, fmt.Errorf("unsupported contract address")
 	}
 
-	ok := s.client.IsHexAddress(req.To)
+	ok := ethcli.IsHexAddress(req.To)
 	if !ok {
 		return MintResponse{}, fmt.Errorf("invalid to address")
 	}
-	to := s.client.GethHexToAddress(req.To)
+	to := ethcli.GethHexToAddress(req.To)
 	amount, ok := new(big.Int).SetString(req.Amount, 10)
 	if !ok {
 		return MintResponse{}, fmt.Errorf("invalid amount")
 	}
 
-	valueWei, err := s.client.AmountToWei(req.ValueETH)
+	valueWei, err := ethcli.AmountToWei(req.ValueETH)
 	if err != nil {
 		return MintResponse{}, fmt.Errorf("invalid valueEth: %w", err)
 	}
