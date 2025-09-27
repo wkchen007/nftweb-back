@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	gethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
+	"github.com/wkchen007/nftweb-back/internal/models"
+	"github.com/wkchen007/nftweb-back/internal/repository"
 )
 
 type Service struct {
@@ -21,6 +24,7 @@ type Service struct {
 	abi      abi.ABI
 	contract gethcommon.Address
 	config   *Config
+	DB       repository.DatabaseRepo
 }
 
 func loadABIFromFile(path string) (abi.ABI, error) {
@@ -236,15 +240,31 @@ func (s *Service) TokensOfOwner(req TokensOfOwnerRequest) (TokensOfOwnerResponse
 	log.Printf("[nft] TokensOfOwner found tokens: %+v owned by %s", ids, owner.Hex())
 
 	//3.找尋TokenURI（如果需要）
-	items := make([]TokenItem, 0, len(ids))
+	intIDs := make([]int, 0, len(ids))
+	for _, id := range ids {
+		intIDs = append(intIDs, int(id.Int64()))
+	}
+	items := make([]models.TokenItem, 0, len(intIDs))
 	if req.IncludeTokenURI {
-		for _, id := range ids {
-			uri, _ := s.TokenURI(id) // 單筆失敗就留空
-			items = append(items, TokenItem{TokenID: id.String(), TokenURI: uri})
+		now := time.Now()
+		deadline := time.Date(2025, 10, 1, 0, 0, 0, 0, time.Local) // 2025年10月1日
+		if now.Before(deadline) {
+			box, err := s.DB.GetBoxItem()
+			if err != nil {
+				return TokensOfOwnerResponse{}, fmt.Errorf("GetBoxItem: %w", err)
+			}
+			for _, id := range intIDs {
+				items = append(items, models.TokenItem{TokenID: strconv.Itoa(id), TokenURI: box.TokenURI, ImageURI: box.ImageURI})
+			}
+		} else {
+			items, err = s.DB.GetTokenItem(intIDs)
+			if err != nil {
+				return TokensOfOwnerResponse{}, fmt.Errorf("GetTokenItem: %w", err)
+			}
 		}
 	} else {
-		for _, id := range ids {
-			items = append(items, TokenItem{TokenID: id.String()})
+		for _, id := range intIDs {
+			items = append(items, models.TokenItem{TokenID: strconv.Itoa(id)})
 		}
 	}
 

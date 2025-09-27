@@ -7,3 +7,9 @@ type NFT struct {
 	Meta  string `json:"meta"`
 	Image string `json:"image"`
 }
+
+type TokenItem struct {
+	TokenID  string `json:"tokenId"`
+	TokenURI string `json:"tokenURI,omitempty"`
+	ImageURI string `json:"imageURI,omitempty"`
+}

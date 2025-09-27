@@ -3,6 +3,8 @@ package dbrepo
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/wkchen007/nftweb-back/internal/models"
@@ -57,6 +59,73 @@ func (m *PostgresDBRepo) AllNFTs() ([]*models.NFT, error) {
 	}
 
 	return nfts, nil
+}
+
+func (m *PostgresDBRepo) GetTokenItem(ids []int) ([]models.TokenItem, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		select id, meta, image
+		from nft
+		where id in (%s)
+	`, strings.Join(placeholders, ","))
+
+	rows, err := m.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tokens []models.TokenItem
+
+	for rows.Next() {
+		var token models.TokenItem
+		err := rows.Scan(
+			&token.TokenID,
+			&token.TokenURI,
+			&token.ImageURI,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		tokens = append(tokens, token)
+	}
+
+	return tokens, nil
+}
+
+func (m *PostgresDBRepo) GetBoxItem() (models.TokenItem, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	defer cancel()
+
+	query := `
+		select id, meta, image
+		from nft
+		where demo = '0'
+		limit 1
+	`
+
+	var token models.TokenItem
+	row := m.DB.QueryRowContext(ctx, query)
+	err := row.Scan(
+		&token.TokenID,
+		&token.TokenURI,
+		&token.ImageURI,
+	)
+	if err != nil {
+		return models.TokenItem{}, err
+	}
+
+	return token, nil
 }
 
 func (m *PostgresDBRepo) GetUserByEmail(email string) (*models.User, error) {

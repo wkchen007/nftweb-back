@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/wkchen007/nftweb-back/internal/models"
 )
 
 type Handlers struct {
@@ -81,15 +83,10 @@ type TokensOfOwnerRequest struct {
 	IncludeTokenURI bool   `json:"includeTokenURI,omitempty"` // 是否同時查 tokenURI
 }
 
-type TokenItem struct {
-	TokenID  string `json:"tokenId"`
-	TokenURI string `json:"tokenURI,omitempty"`
-}
-
 type TokensOfOwnerResponse struct {
-	Owner  string      `json:"owner"`
-	Count  int         `json:"count"`
-	Tokens []TokenItem `json:"tokens"`
+	Owner  string             `json:"owner"`
+	Count  int                `json:"count"`
+	Tokens []models.TokenItem `json:"tokens"`
 }
 
 func (h *Handlers) TokensOfOwner(w http.ResponseWriter, r *http.Request) {

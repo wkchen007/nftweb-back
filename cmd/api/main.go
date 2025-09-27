@@ -71,6 +71,7 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to create nft service:", err)
 	}
+	svc.DB = app.DB
 	app.nft = nft.NewHandlers(svc)
 	log.Print("[nft] service created")
 
