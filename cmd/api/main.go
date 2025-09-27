@@ -9,10 +9,14 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
 	"github.com/wkchen007/nftweb-back/internal/nft"
+	"github.com/wkchen007/nftweb-back/internal/repository"
+	"github.com/wkchen007/nftweb-back/internal/repository/dbrepo"
 )
 
 type application struct {
 	httpAddr  string
+	DSN       string
+	DB        repository.DatabaseRepo
 	ethClient *ethcli.Client
 	nft       *nft.Handlers
 }
@@ -31,7 +35,16 @@ func main() {
 		defaultAddr = ":8080"
 	}
 	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
+	flag.StringVar(&app.DSN, "dsn", "host=postgres port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
 	flag.Parse()
+
+	// connect to the databases
+	connPostgres, err := app.connectToDB()
+	if err != nil {
+		log.Fatal(err)
+	}
+	app.DB = &dbrepo.PostgresDBRepo{DB: connPostgres}
+	defer app.DB.Connection().Close()
 
 	// 從環境變數讀設定檔路徑，預設用 configs/config.yaml
 	configPath := os.Getenv("CONFIG_PATH")
