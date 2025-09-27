@@ -30,6 +30,16 @@ func (app *application) Home(w http.ResponseWriter, r *http.Request) {
 	_ = app.writeJSON(w, http.StatusOK, payload)
 }
 
+func (app *application) AllNFTs(w http.ResponseWriter, r *http.Request) {
+	nfts, err := app.DB.AllNFTs()
+	if err != nil {
+		app.errorJSON(w, err)
+		return
+	}
+
+	_ = app.writeJSON(w, http.StatusOK, nfts)
+}
+
 func (app *application) GetWalletAddress(w http.ResponseWriter, r *http.Request) {
 	fromAddr := app.ethClient.GetAddress()
 

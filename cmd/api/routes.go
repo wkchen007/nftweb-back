@@ -16,6 +16,7 @@ func (app *application) routes() http.Handler {
 
 	mux.Get("/", app.Home)
 	mux.Get("/healthz", app.healthzHandler)
+	mux.Get("/demo", app.AllNFTs)
 
 	mux.Route("/wallet", func(mux chi.Router) {
 		mux.Post("/useSigner", app.PostWalletUseSigner)

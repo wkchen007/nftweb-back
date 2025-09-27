@@ -24,9 +24,10 @@ func (m *PostgresDBRepo) AllNFTs() ([]*models.NFT, error) {
 
 	query := `
 		select
-			id, name, image
+			id, name, description, meta, image
 		from
 			nft
+		where demo = '1'
 		order by
 			id
 	`
@@ -44,6 +45,8 @@ func (m *PostgresDBRepo) AllNFTs() ([]*models.NFT, error) {
 		err := rows.Scan(
 			&nft.ID,
 			&nft.Name,
+			&nft.Desc,
+			&nft.Meta,
 			&nft.Image,
 		)
 		if err != nil {
