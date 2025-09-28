@@ -80,6 +80,7 @@ func (c *Client) Close() error {
 	return nil
 }
 
+func (c *Client) Backend() *ethclient.Client       { return c.backend }
 func (c *Client) ConBackend() bind.ContractBackend { return c.backend }
 
 func (c *Client) HasSigner() bool {
@@ -107,6 +108,10 @@ func (c *Client) Network() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.network
+}
+
+func (c *Client) IsTxHex(s string) bool {
+	return strings.HasPrefix(s, "0x") && len(s) == 66
 }
 
 // NewTransactor 依目前 signer 產生帶 context 的 TransactOpts

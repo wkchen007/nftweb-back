@@ -9,6 +9,7 @@ import (
 type Config struct {
 	NFT struct {
 		ContractAddress string `yaml:"contractAddress"`
+		ContractTxHash  string `yaml:"contractTxHash"`
 		ABIPath         string `yaml:"abiPath"`
 		MaxScanTokenID  int64  `yaml:"maxScanTokenID"`
 	} `yaml:"nft"`

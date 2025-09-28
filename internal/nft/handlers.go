@@ -78,6 +78,21 @@ func (h *Handlers) Mint(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
+type OwnerResponse struct {
+	Contract string `json:"contract"`
+	Owner    string `json:"owner"`
+}
+
+func (h *Handlers) Owner(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.svc.ConCreator()
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("contract creator failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
 type TokensOfOwnerRequest struct {
 	Owner           string `json:"owner"`
 	IncludeTokenURI bool   `json:"includeTokenURI,omitempty"` // 是否同時查 tokenURI

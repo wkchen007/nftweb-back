@@ -14,17 +14,19 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	gethcommon "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
 	"github.com/wkchen007/nftweb-back/internal/models"
 	"github.com/wkchen007/nftweb-back/internal/repository"
 )
 
 type Service struct {
-	client   *ethcli.Client
-	abi      abi.ABI
-	contract gethcommon.Address
-	config   *Config
-	DB       repository.DatabaseRepo
+	client    *ethcli.Client
+	abi       abi.ABI
+	contract  gethcommon.Address
+	conTxHash gethcommon.Hash
+	config    *Config
+	DB        repository.DatabaseRepo
 }
 
 func loadABIFromFile(path string) (abi.ABI, error) {
@@ -39,26 +41,53 @@ func NewServiceFromConfig(client *ethcli.Client, cfg *Config) (*Service, error) 
 	if cfg == nil {
 		return nil, fmt.Errorf("nil config")
 	}
-	return NewServiceWithABIPath(client, cfg.NFT.ABIPath, cfg.NFT.ContractAddress, cfg)
+	return NewServiceWithABIPath(client, cfg.NFT.ABIPath, cfg.NFT.ContractAddress, cfg.NFT.ContractTxHash, cfg)
 }
 
 // NewServiceWithABIPath：顯式指定 ABI 路徑與合約地址（方便測試）
-func NewServiceWithABIPath(client *ethcli.Client, abiPath, contractAddr string, cfg *Config) (*Service, error) {
+func NewServiceWithABIPath(client *ethcli.Client, abiPath, contractAddr string, conTxHash string, cfg *Config) (*Service, error) {
 	if strings.TrimSpace(abiPath) == "" {
 		return nil, fmt.Errorf("abiPath is empty")
 	}
 	if !gethcommon.IsHexAddress(contractAddr) {
 		return nil, fmt.Errorf("invalid contract address")
 	}
+	if !client.IsTxHex(conTxHash) {
+		return nil, fmt.Errorf("invalid contract tx hash")
+	}
 	parsed, err := loadABIFromFile(abiPath)
 	if err != nil {
 		return nil, err
 	}
 	return &Service{
-		client:   client,
-		abi:      parsed,
-		contract: gethcommon.HexToAddress(contractAddr),
-		config:   cfg,
+		client:    client,
+		abi:       parsed,
+		contract:  gethcommon.HexToAddress(contractAddr),
+		conTxHash: gethcommon.HexToHash(conTxHash),
+		config:    cfg,
+	}, nil
+}
+
+func (s *Service) ConCreator() (OwnerResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	//查看交易內容
+	backend := s.client.Backend()
+	tx, _, err := backend.TransactionByHash(ctx, s.conTxHash)
+	if err != nil {
+		return OwnerResponse{}, fmt.Errorf("failed to get contract creation tx: %w", err)
+	}
+
+	// 從交易裡還原 sender
+	signer := types.LatestSignerForChainID(s.client.ChainID())
+	creator, err := types.Sender(signer, tx)
+	if err != nil {
+		return OwnerResponse{}, fmt.Errorf("failed to recover sender")
+	}
+
+	return OwnerResponse{
+		Contract: s.contract.Hex(),
+		Owner:    creator.Hex(),
 	}, nil
 }
 
