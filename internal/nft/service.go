@@ -76,7 +76,7 @@ func (s *Service) OwnerOf(req OwnerOfRequest) (OwnerOfResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	bound := bind.NewBoundContract(s.contract, s.abi, s.client.Backend(), nil, nil)
+	bound := bind.NewBoundContract(s.contract, s.abi, s.client.ConBackend(), nil, nil)
 	var out []interface{}
 	if err := bound.Call(&bind.CallOpts{Context: ctx}, &out, "ownerOf", tokenId); err != nil {
 		return OwnerOfResponse{}, err
@@ -125,7 +125,7 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	}
 	opts.Value = valueWei
 
-	backend := s.client.Backend()
+	backend := s.client.ConBackend()
 	bound := bind.NewBoundContract(s.contract, s.abi, backend, backend, backend)
 
 	// 自動估 gas
@@ -152,7 +152,7 @@ func (s *Service) Counter() (*big.Int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	backend := s.client.Backend()
+	backend := s.client.ConBackend()
 	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
 
 	var out []interface{}
@@ -178,7 +178,7 @@ func (s *Service) TokenURI(tokenID *big.Int) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	backend := s.client.Backend()
+	backend := s.client.ConBackend()
 	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
 
 	var out []interface{}
@@ -207,7 +207,7 @@ func (s *Service) TokensOfOwner(req TokensOfOwnerRequest) (TokensOfOwnerResponse
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	backend := s.client.Backend()
+	backend := s.client.ConBackend()
 	bound := bind.NewBoundContract(s.contract, s.abi, backend, nil, nil)
 
 	// 1. 先問合約目前的 counter

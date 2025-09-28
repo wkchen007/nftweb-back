@@ -80,7 +80,7 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func (c *Client) Backend() bind.ContractBackend { return c.backend }
+func (c *Client) ConBackend() bind.ContractBackend { return c.backend }
 
 func (c *Client) HasSigner() bool {
 	c.mu.RLock()
