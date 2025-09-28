@@ -126,6 +126,36 @@ func (c *Client) NewTransactor(ctx context.Context) (*bind.TransactOpts, error) 
 		return nil, err
 	}
 	opts.Context = ctx
+
+	// 查 nonce
+	nonce, err := c.backend.PendingNonceAt(ctx, c.from)
+	if err != nil {
+		return nil, err
+	}
+	opts.Nonce = new(big.Int).SetUint64(nonce)
+
+	// 取得 tip 與 baseFee，並設定 feeCap = 2*baseFee + tip
+	tip, err := c.backend.SuggestGasTipCap(ctx)
+	if err != nil {
+		return nil, err
+	}
+	h, err := c.backend.HeaderByNumber(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	baseFee := new(big.Int)
+	if h.BaseFee != nil {
+		baseFee.Set(h.BaseFee)
+	}
+
+	twiceBase := new(big.Int).Mul(baseFee, big.NewInt(2))
+	feeCap := new(big.Int).Add(twiceBase, tip)
+
+	// 寫入 EIP-1559 欄位
+	opts.GasTipCap = tip
+	opts.GasFeeCap = feeCap
+	opts.GasLimit = 0 // 由 EstimateGas 補上
+
 	return opts, nil
 }
 

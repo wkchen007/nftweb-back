@@ -3,8 +3,10 @@ package nft
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/wkchen007/nftweb-back/internal/models"
 )
 
@@ -117,6 +119,51 @@ func (h *Handlers) TokensOfOwner(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.errorJSON(w, fmt.Errorf("tokensOfOwner failed: %w", err), http.StatusInternalServerError)
 		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
+type ConResponse struct {
+	TxHash   string `json:"txHash"`
+	Contract string `json:"contract"`
+}
+
+func (h *Handlers) OpenBlindBox(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.svc.OpenBlindBox()
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("openBlindBox failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handlers) TokenURI(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		h.errorJSON(w, fmt.Errorf("tokenId is required"), http.StatusBadRequest)
+		return
+	}
+
+	bigID := new(big.Int)
+	_, ok := bigID.SetString(id, 10)
+	if !ok {
+		h.errorJSON(w, fmt.Errorf("invalid tokenId: %s", id), http.StatusBadRequest)
+		return
+	}
+	uri, err := h.svc.TokenURI(bigID)
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("tokenURI failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	resp := struct {
+		TokenID  int    `json:"tokenId"`
+		TokenURI string `json:"tokenURI"`
+	}{
+		TokenID:  int(bigID.Int64()),
+		TokenURI: uri,
 	}
 
 	h.writeJSON(w, http.StatusOK, resp)

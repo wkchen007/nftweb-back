@@ -124,6 +124,57 @@ func (s *Service) OwnerOf(req OwnerOfRequest) (OwnerOfResponse, error) {
 	}, nil
 }
 
+// 打包、估算、簽名並送出 EIP-1559 交易（使用 newTransactor 設好的 tip/feecap）
+func (s *Service) sendTx(ctx context.Context, method string, args ...interface{}) (txHash *gethcommon.Hash, err error) {
+	// calldata
+	data, err := s.abi.Pack(method, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	// opts（已含 Nonce / GasTipCap / GasFeeCap）
+	backend := s.client.ConBackend()
+	opts, err := s.client.NewTransactor(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 估 gasLimit，使用 EIP-1559 欄位
+	call := ethereum.CallMsg{From: opts.From, To: &s.contract, Data: data, Value: big.NewInt(0), GasFeeCap: opts.GasFeeCap, GasTipCap: opts.GasTipCap}
+	gasLimit, gasErr := backend.EstimateGas(ctx, call)
+	if gasErr != nil {
+		return nil, fmt.Errorf("estimate gas: %w", gasErr)
+	}
+	opts.GasLimit = gasLimit
+
+	bound := bind.NewBoundContract(s.contract, s.abi, backend, backend, backend)
+
+	tx, err := bound.Transact(opts, method, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("[nft] %s tx sent: %s contract: %s from: %s", method, tx.Hash().Hex(), s.contract.Hex(), opts.From.Hex())
+
+	hash := tx.Hash()
+	return &hash, nil
+}
+
+func (s *Service) OpenBlindBox() (ConResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	hash, err := s.sendTx(ctx, "openBlindBox")
+	if err != nil {
+		return ConResponse{}, fmt.Errorf("openBlindBox failed: %w", err)
+	}
+
+	return ConResponse{
+		TxHash:   hash.Hex(),
+		Contract: s.contract.Hex(),
+	}, nil
+}
+
 func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	contract := gethcommon.HexToAddress(req.Contract)
 	if contract != s.contract {
@@ -157,7 +208,6 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	backend := s.client.ConBackend()
 	bound := bind.NewBoundContract(s.contract, s.abi, backend, backend, backend)
 
-	// 自動估 gas
 	if data, packErr := s.abi.Pack("mint", to, amount); packErr == nil {
 		call := ethereum.CallMsg{From: opts.From, To: &s.contract, Data: data, Value: valueWei}
 		_, _ = backend.EstimateGas(ctx, call)

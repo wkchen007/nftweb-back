@@ -30,6 +30,8 @@ func (app *application) routes() http.Handler {
 		mux.Post("/ownerOf", app.nft.OwnerOf)
 		mux.Post("/mint", app.nft.Mint)
 		mux.Post("/tokensOfOwner", app.nft.TokensOfOwner)
+		mux.Get("/openBlindBox", app.nft.OpenBlindBox)
+		mux.Get("/tokenURI/{id}", app.nft.TokenURI)
 	})
 
 	return mux
