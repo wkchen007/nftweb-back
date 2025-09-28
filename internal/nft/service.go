@@ -125,8 +125,11 @@ func (s *Service) OwnerOf(req OwnerOfRequest) (OwnerOfResponse, error) {
 }
 
 // 打包、估算、簽名並送出 EIP-1559 交易（使用 newTransactor 設好的 tip/feecap）
-func (s *Service) sendTx(ctx context.Context, method string, args ...interface{}) (txHash *gethcommon.Hash, err error) {
+func (s *Service) sendTx(ctx context.Context, method string, value *big.Int, args ...interface{}) (txHash *gethcommon.Hash, err error) {
 	// calldata
+	if value == nil {
+		value = big.NewInt(0)
+	}
 	data, err := s.abi.Pack(method, args...)
 	if err != nil {
 		return nil, err
@@ -138,9 +141,10 @@ func (s *Service) sendTx(ctx context.Context, method string, args ...interface{}
 	if err != nil {
 		return nil, err
 	}
+	opts.Value = new(big.Int).Set(value)
 
 	// 估 gasLimit，使用 EIP-1559 欄位
-	call := ethereum.CallMsg{From: opts.From, To: &s.contract, Data: data, Value: big.NewInt(0), GasFeeCap: opts.GasFeeCap, GasTipCap: opts.GasTipCap}
+	call := ethereum.CallMsg{From: opts.From, To: &s.contract, Data: data, Value: value, GasFeeCap: opts.GasFeeCap, GasTipCap: opts.GasTipCap}
 	gasLimit, gasErr := backend.EstimateGas(ctx, call)
 	if gasErr != nil {
 		return nil, fmt.Errorf("estimate gas: %w", gasErr)
@@ -164,7 +168,7 @@ func (s *Service) OpenBlindBox() (ConResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	hash, err := s.sendTx(ctx, "openBlindBox")
+	hash, err := s.sendTx(ctx, "openBlindBox", nil)
 	if err != nil {
 		return ConResponse{}, fmt.Errorf("openBlindBox failed: %w", err)
 	}
@@ -179,7 +183,7 @@ func (s *Service) Withdraw() (ConResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	hash, err := s.sendTx(ctx, "withdraw")
+	hash, err := s.sendTx(ctx, "withdraw", nil)
 	if err != nil {
 		return ConResponse{}, fmt.Errorf("withdraw failed: %w", err)
 	}
@@ -214,29 +218,14 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	opts, err := s.client.NewTransactor(ctx)
+	tx, err := s.sendTx(ctx, "mint", valueWei, to, amount)
 	if err != nil {
-		return MintResponse{}, err
-	}
-	opts.Value = valueWei
-
-	backend := s.client.ConBackend()
-	bound := bind.NewBoundContract(s.contract, s.abi, backend, backend, backend)
-
-	if data, packErr := s.abi.Pack("mint", to, amount); packErr == nil {
-		call := ethereum.CallMsg{From: opts.From, To: &s.contract, Data: data, Value: valueWei}
-		_, _ = backend.EstimateGas(ctx, call)
+		return MintResponse{}, fmt.Errorf("mint failed: %w", err)
 	}
 
-	tx, err := bound.Transact(opts, "mint", to, amount)
-	if err != nil {
-		return MintResponse{}, err
-	}
-
-	log.Printf("[nft] Mint tx sent: %s contract: %s from: %s", tx.Hash().Hex(), req.Contract, opts.From.Hex())
 	return MintResponse{
-		TxHash:   tx.Hash().Hex(),
-		From:     opts.From.Hex(),
+		TxHash:   tx.Hex(),
+		From:     s.client.From().Hex(),
 		Contract: req.Contract,
 	}, nil
 }
@@ -267,6 +256,17 @@ func (s *Service) Counter() (*big.Int, error) {
 	}
 }
 
+func (s *Service) Count() (CountResponse, error) {
+	count, err := s.Counter()
+	if err != nil {
+		return CountResponse{}, fmt.Errorf("get counter: %w", err)
+	}
+	return CountResponse{
+		Count: int(count.Int64()),
+		Total: int(s.config.NFT.MaxScanTokenID),
+	}, nil
+}
+
 func (s *Service) Balance() (BalanceResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -277,8 +277,9 @@ func (s *Service) Balance() (BalanceResponse, error) {
 		return BalanceResponse{}, fmt.Errorf("get balance: %w", err)
 	}
 	return BalanceResponse{
-		Contract: s.contract.Hex(),
-		Balance:  ethcli.WeiToEtherString(balance),
+		Contract:   s.contract.Hex(),
+		Balance:    balance.String(),
+		BalanceETH: ethcli.WeiToEtherString(balance),
 	}, nil
 }
 

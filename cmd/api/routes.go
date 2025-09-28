@@ -34,6 +34,7 @@ func (app *application) routes() http.Handler {
 		mux.Get("/tokenURI/{id}", app.nft.TokenURI)
 		mux.Get("/withdraw", app.nft.Withdraw)
 		mux.Get("/balance", app.nft.Balance)
+		mux.Get("/count", app.nft.Count)
 	})
 
 	return mux

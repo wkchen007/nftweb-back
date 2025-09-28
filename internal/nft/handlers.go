@@ -180,14 +180,30 @@ func (h *Handlers) TokenURI(w http.ResponseWriter, r *http.Request) {
 }
 
 type BalanceResponse struct {
-	Contract string `json:"contract"`
-	Balance  string `json:"balance"` // ETH
+	Contract   string `json:"contract"`
+	Balance    string `json:"balance"`    // wei
+	BalanceETH string `json:"balanceETH"` // ETH
 }
 
 func (h *Handlers) Balance(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.Balance()
 	if err != nil {
 		h.errorJSON(w, fmt.Errorf("balance failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
+type CountResponse struct {
+	Count int `json:"count"`
+	Total int `json:"total"`
+}
+
+func (h *Handlers) Count(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.svc.Count()
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("counter failed: %w", err), http.StatusInternalServerError)
 		return
 	}
 
