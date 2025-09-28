@@ -139,6 +139,16 @@ func (h *Handlers) OpenBlindBox(w http.ResponseWriter, r *http.Request) {
 	h.writeJSON(w, http.StatusOK, resp)
 }
 
+func (h *Handlers) Withdraw(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.svc.Withdraw()
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("withdraw failed: %w", err), http.StatusInternalServerError)
+		return
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
 func (h *Handlers) TokenURI(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
@@ -164,6 +174,21 @@ func (h *Handlers) TokenURI(w http.ResponseWriter, r *http.Request) {
 	}{
 		TokenID:  int(bigID.Int64()),
 		TokenURI: uri,
+	}
+
+	h.writeJSON(w, http.StatusOK, resp)
+}
+
+type BalanceResponse struct {
+	Contract string `json:"contract"`
+	Balance  string `json:"balance"` // ETH
+}
+
+func (h *Handlers) Balance(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.svc.Balance()
+	if err != nil {
+		h.errorJSON(w, fmt.Errorf("balance failed: %w", err), http.StatusInternalServerError)
+		return
 	}
 
 	h.writeJSON(w, http.StatusOK, resp)

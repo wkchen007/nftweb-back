@@ -175,6 +175,21 @@ func (s *Service) OpenBlindBox() (ConResponse, error) {
 	}, nil
 }
 
+func (s *Service) Withdraw() (ConResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	hash, err := s.sendTx(ctx, "withdraw")
+	if err != nil {
+		return ConResponse{}, fmt.Errorf("withdraw failed: %w", err)
+	}
+
+	return ConResponse{
+		TxHash:   hash.Hex(),
+		Contract: s.contract.Hex(),
+	}, nil
+}
+
 func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	contract := gethcommon.HexToAddress(req.Contract)
 	if contract != s.contract {
@@ -250,6 +265,21 @@ func (s *Service) Counter() (*big.Int, error) {
 	default:
 		return nil, fmt.Errorf("unexpected counter return type: %T", out[0])
 	}
+}
+
+func (s *Service) Balance() (BalanceResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	backend := s.client.Backend()
+	balance, err := backend.BalanceAt(ctx, s.contract, nil)
+	if err != nil {
+		return BalanceResponse{}, fmt.Errorf("get balance: %w", err)
+	}
+	return BalanceResponse{
+		Contract: s.contract.Hex(),
+		Balance:  ethcli.WeiToEtherString(balance),
+	}, nil
 }
 
 // TokenURI 讀取合約指定 tokenId 的 tokenURI
