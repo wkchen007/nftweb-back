@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/wkchen007/nftweb-back/internal/models"
@@ -50,16 +51,13 @@ func (h *Handlers) OwnerOf(w http.ResponseWriter, r *http.Request) {
 
 // Mint 鑄造 NFT
 type MintRequest struct {
-	Contract string `json:"contract"`
-	To       string `json:"to"`
 	Amount   string `json:"amount"`
-	ValueETH string `json:"valueEth"`
+	ValueETH string `json:"valueETH,omitempty"`
 }
 
 type MintResponse struct {
-	TxHash   string `json:"txHash"`
-	From     string `json:"from"`
-	Contract string `json:"contract"`
+	TxHash string `json:"txHash"`
+	From   string `json:"from"`
 }
 
 func (h *Handlers) Mint(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +66,14 @@ func (h *Handlers) Mint(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.errorJSON(w, err, http.StatusBadRequest)
 		return
+	}
+	if req.ValueETH == "" {
+		num, err := strconv.Atoi(req.Amount)
+		if err != nil {
+			h.errorJSON(w, fmt.Errorf("invalid amount: %w", err), http.StatusBadRequest)
+			return
+		}
+		req.ValueETH = fmt.Sprintf("%f", float64(num)*0.01) // 單價 0.01 ETH
 	}
 	log.Printf("[nft] Mint request: %+v", req)
 

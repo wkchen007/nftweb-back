@@ -195,16 +195,11 @@ func (s *Service) Withdraw() (ConResponse, error) {
 }
 
 func (s *Service) Mint(req MintRequest) (MintResponse, error) {
-	contract := gethcommon.HexToAddress(req.Contract)
-	if contract != s.contract {
-		return MintResponse{}, fmt.Errorf("unsupported contract address")
-	}
-
-	ok := ethcli.IsHexAddress(req.To)
+	ok := ethcli.IsHexAddress(s.client.From().Hex())
 	if !ok {
 		return MintResponse{}, fmt.Errorf("invalid to address")
 	}
-	to := ethcli.GethHexToAddress(req.To)
+	to := ethcli.GethHexToAddress(s.client.From().Hex())
 	amount, ok := new(big.Int).SetString(req.Amount, 10)
 	if !ok {
 		return MintResponse{}, fmt.Errorf("invalid amount")
@@ -224,9 +219,8 @@ func (s *Service) Mint(req MintRequest) (MintResponse, error) {
 	}
 
 	return MintResponse{
-		TxHash:   tx.Hex(),
-		From:     s.client.From().Hex(),
-		Contract: req.Contract,
+		TxHash: tx.Hex(),
+		From:   s.client.From().Hex(),
 	}, nil
 }
 
