@@ -6,9 +6,11 @@ require github.com/go-chi/chi/v5 v5.2.3
 
 require (
 	github.com/ethereum/go-ethereum v1.16.3
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v4 v4.18.3
 	github.com/joho/godotenv v1.5.1
+	golang.org/x/crypto v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -38,7 +40,6 @@ require (
 	github.com/supranational/blst v0.3.14 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
@@ -16,6 +17,7 @@ import (
 type application struct {
 	httpAddr  string
 	DSN       string
+	auth      Auth
 	DB        repository.DatabaseRepo
 	ethClient *ethcli.Client
 	nft       *nft.Handlers
@@ -45,6 +47,19 @@ func main() {
 	}
 	app.DB = &dbrepo.PostgresDBRepo{DB: connPostgres}
 	defer app.DB.Connection().Close()
+
+	// 讀取 JWT 相關設定
+	app.auth = Auth{
+		Issuer:        os.Getenv("JWT_ISSUER"),
+		Audience:      os.Getenv("JWT_AUDIENCE"),
+		Secret:        os.Getenv("JWT_SECRET"),
+		TokenExpiry:   time.Minute * 5,
+		RefreshExpiry: time.Hour * 24,
+		CookiePath:    "/",
+		CookieName:    "refresh_token",
+		CookieDomain:  os.Getenv("COOKIE_DOMAIN"),
+	}
+	log.Printf("JWT config: issuer=%s, audience=%s, cookie_domain=%s", app.auth.Issuer, app.auth.Audience, app.auth.CookieDomain)
 
 	// 從環境變數讀設定檔路徑，預設用 configs/config.yaml
 	configPath := os.Getenv("CONFIG_PATH")
