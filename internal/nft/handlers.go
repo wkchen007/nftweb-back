@@ -102,8 +102,7 @@ func (h *Handlers) Owner(w http.ResponseWriter, r *http.Request) {
 }
 
 type TokensOfOwnerRequest struct {
-	Owner           string `json:"owner"`
-	IncludeTokenURI bool   `json:"includeTokenURI,omitempty"` // 是否同時查 tokenURI
+	IncludeTokenURI bool `json:"includeTokenURI"` // 是否同時查 tokenURI
 }
 
 type TokensOfOwnerResponse struct {

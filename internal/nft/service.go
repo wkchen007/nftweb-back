@@ -303,10 +303,14 @@ func (s *Service) TokenURI(tokenID *big.Int) (string, error) {
 // TokensOfOwner 線性掃描 ownerOf 取得某地址擁有的 tokenIds（因合約未提供 Enumerable）。
 // maxScan<=0 時，優先使用 config.NFT.MaxScanTokenID；若也未設定，預設 1000。
 func (s *Service) TokensOfOwner(req TokensOfOwnerRequest) (TokensOfOwnerResponse, error) {
-	if !gethcommon.IsHexAddress(req.Owner) {
+	owner := s.client.From()
+	if !gethcommon.IsHexAddress(owner.Hex()) {
 		return TokensOfOwnerResponse{}, fmt.Errorf("invalid address")
 	}
-	owner := gethcommon.HexToAddress(req.Owner)
+	// 濾掉零地址 0x0000000000000000000000000000000000000000
+	if owner == (gethcommon.Address{}) {
+		return TokensOfOwnerResponse{}, fmt.Errorf("address cannot be zero address")
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()

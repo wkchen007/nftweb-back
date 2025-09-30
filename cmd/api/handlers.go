@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
 )
@@ -54,6 +55,16 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	valid, err := user.PasswordMatches(requestPayload.Password)
 	if err != nil || !valid {
 		app.errorJSON(w, fmt.Errorf("invalid email or password"), http.StatusBadRequest)
+		return
+	}
+
+	//寫入 eth client 的 signer
+	req := ethcli.UseSignerRequest{
+		PrivateKey: os.Getenv("PRIVATE_KEY"),
+	}
+
+	if err := app.ethClient.UseSigner(req); err != nil {
+		app.errorJSON(w, err, http.StatusBadGateway)
 		return
 	}
 
