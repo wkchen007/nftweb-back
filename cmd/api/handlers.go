@@ -78,6 +78,11 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	app.writeJSON(w, http.StatusAccepted, tokens)
 }
 
+func (app *application) logout(w http.ResponseWriter, r *http.Request) {
+	http.SetCookie(w, app.auth.GetExpiredRefreshCookie())
+	w.WriteHeader(http.StatusAccepted)
+}
+
 func (app *application) AllNFTs(w http.ResponseWriter, r *http.Request) {
 	nfts, err := app.DB.AllNFTs()
 	if err != nil {
