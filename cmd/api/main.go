@@ -37,7 +37,7 @@ func main() {
 		defaultAddr = ":8080"
 	}
 	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
-	flag.StringVar(&app.DSN, "dsn", "host=localhost port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
+	flag.StringVar(&app.DSN, "dsn", "host=postgres port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
 	flag.Parse()
 
 	// connect to the databases

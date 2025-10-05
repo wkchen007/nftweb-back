@@ -14,10 +14,6 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 # === run stage ===
 FROM alpine:3.20
 
-# 非 root 執行
-RUN adduser -D -H appuser
-USER appuser
-
 WORKDIR /app
 COPY --from=builder /bin/goapp /bin/goapp
 
