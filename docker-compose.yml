@@ -40,39 +40,6 @@ services:
       # 持久化資料（包含 mnesia 資料庫等）
       - rabbitmq_data:/var/lib/rabbitmq
 
-  mongo:
-    image: 'mongo:7.0'
-    container_name: mongo
-    restart: always
-    ports:
-      - "27017:27017"
-    environment:
-      MONGO_INITDB_DATABASE: logs
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-    healthcheck:
-      # 使用 mongosh 對 admin DB 做 ping
-      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')", "-u", "admin", "-p", "password", "--authenticationDatabase", "admin" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    volumes:
-      - mongodata:/data/db
-
-  mailhog:
-    image: 'mailhog/mailhog:latest'
-    container_name: mailhog
-    restart: always
-    ports:
-      - "1025:1025" # SMTP
-      - "8025:8025" # Web UI http://localhost:8025
-    healthcheck:
-      # 確認 Web UI 可回應；wget 由 busybox 提供
-      test: [ "CMD", "wget", "-qO-", "http://localhost:8025/api/v2/messages" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   goapp:
     build: .
     container_name: goapp
@@ -80,10 +47,6 @@ services:
       postgres:
         condition: service_healthy
       rabbitmq:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
-      mailhog:
         condition: service_healthy
     ports:
       - "8080:8080"
@@ -102,4 +65,3 @@ services:
 volumes:
   rabbitmq_data:
   pgdata:
-  mongodata:
