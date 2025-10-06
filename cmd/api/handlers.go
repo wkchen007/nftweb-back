@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -87,11 +89,41 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, refreshCookie)
 
 	app.writeJSON(w, http.StatusAccepted, tokens)
+
+	app.logRequest("auth", fmt.Sprintf("user %s logged in", user.Email))
 }
 
 func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, app.auth.GetExpiredRefreshCookie())
 	w.WriteHeader(http.StatusAccepted)
+}
+
+func (app *application) logRequest(name, data string) error {
+	var entry struct {
+		Name string `json:"name"`
+		Data string `json:"data"`
+	}
+
+	entry.Name = name
+	entry.Data = data
+	log.Printf("[http] log entry: %+v", entry)
+
+	jsonData, _ := json.MarshalIndent(entry, "", "\t")
+	logServiceURL := "http://log-service:8000/log"
+
+	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{}
+	_, err = client.Do(request)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (app *application) AllNFTs(w http.ResponseWriter, r *http.Request) {
