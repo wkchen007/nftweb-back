@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -9,6 +8,7 @@ import (
 	"os"
 
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
+	"github.com/wkchen007/nftweb-back/internal/event"
 )
 
 // /healthz handler
@@ -90,7 +90,12 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 
 	app.writeJSON(w, http.StatusAccepted, tokens)
 
-	app.logRequest("auth", fmt.Sprintf("user %s logged in", user.Email))
+	mail := MailPayload{
+		To:      user.Email,
+		Subject: "Login Notification",
+		Message: fmt.Sprintf("User %s logged in", user.Email),
+	}
+	app.pushToQueue("auth", fmt.Sprintf("user %s logged in", user.Email), &mail)
 }
 
 func (app *application) logout(w http.ResponseWriter, r *http.Request) {
@@ -98,31 +103,40 @@ func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (app *application) logRequest(name, data string) error {
-	var entry struct {
-		Name string `json:"name"`
-		Data string `json:"data"`
-	}
+type LogPayload struct {
+	Name string       `json:"name"`
+	Data string       `json:"data"`
+	Mail *MailPayload `json:"mail,omitempty"`
+}
 
-	entry.Name = name
-	entry.Data = data
-	log.Printf("[http] log entry: %+v", entry)
+type MailPayload struct {
+	To      string `json:"to"`
+	Subject string `json:"subject"`
+	Message string `json:"message"`
+}
 
-	jsonData, _ := json.MarshalIndent(entry, "", "\t")
-	logServiceURL := "http://log-service:8000/log"
-
-	request, err := http.NewRequest("POST", logServiceURL, bytes.NewBuffer(jsonData))
+// pushToQueue pushes a message into RabbitMQ
+func (app *application) pushToQueue(name, msg string, mail *MailPayload) error {
+	emitter, err := event.NewEventEmitter(app.Amqp)
 	if err != nil {
 		return err
 	}
 
-	client := &http.Client{}
-	_, err = client.Do(request)
+	payload := LogPayload{
+		Name: name,
+		Data: msg,
+	}
 
+	// 若 mail 不為 nil，則加進 payload
+	if mail != nil {
+		payload.Mail = mail
+	}
+
+	j, _ := json.MarshalIndent(&payload, "", "\t")
+	err = emitter.Push(string(j), "log.INFO")
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

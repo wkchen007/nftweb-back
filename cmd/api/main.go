@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
 	"github.com/wkchen007/nftweb-back/internal/nft"
 	"github.com/wkchen007/nftweb-back/internal/repository"
@@ -21,6 +22,8 @@ type application struct {
 	DB        repository.DatabaseRepo
 	ethClient *ethcli.Client
 	nft       *nft.Handlers
+	amqpURL   string
+	Amqp      *amqp.Connection
 }
 
 func main() {
@@ -38,6 +41,7 @@ func main() {
 	}
 	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
 	flag.StringVar(&app.DSN, "dsn", "host=postgres port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
+	flag.StringVar(&app.amqpURL, "amqpURL", "amqp://guest:guest@rabbitmq:5672/", "AMQP server URL")
 	flag.Parse()
 
 	// connect to the databases
@@ -47,6 +51,13 @@ func main() {
 	}
 	app.DB = &dbrepo.PostgresDBRepo{DB: connPostgres}
 	defer app.DB.Connection().Close()
+
+	// 連線到 RabbitMQ
+	app.Amqp, err = app.connectToAmqp()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer app.Amqp.Close()
 
 	// 讀取 JWT 相關設定
 	app.auth = Auth{
