@@ -44,13 +44,11 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: always
-    env_file:
-      - .env
     ports:
       - "6379:6379"
-    command: [ "redis-server", "--requirepass", "${REDIS_PASSWORD}" ]
+    command: [ "redis-server", "--requirepass", "supersecret" ]
     healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -a \"$REDIS_PASSWORD\" ping | grep PONG" ]
+      test: [ "CMD-SHELL", "redis-cli -a supersecret ping | grep PONG" ]
       interval: 10s
       timeout: 5s
       retries: 5

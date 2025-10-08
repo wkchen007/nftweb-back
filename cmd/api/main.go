@@ -45,7 +45,7 @@ func main() {
 	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
 	flag.StringVar(&app.DSN, "dsn", "host=postgres port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
 	flag.StringVar(&app.amqpURL, "amqpURL", "amqp://guest:guest@rabbitmq:5672/", "AMQP server URL")
-	flag.StringVar(&app.redisURL, "redisURL", "redis:6379", "Redis server URL")
+	flag.StringVar(&app.redisURL, "redisURL", "redis://:supersecret@redis:6379/0", "Redis server URL")
 	flag.Parse()
 
 	// connect to the databases
