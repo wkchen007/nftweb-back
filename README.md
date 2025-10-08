@@ -51,17 +51,22 @@ cp .env.example .env
 
 部署 NFT 合約，ABI 存入 json ，請參考 `config.yaml`，根據需求修改設定。
 
-### 3. 建立映像檔並啟動服務
+### 3. 修改 DB sql 檔案
+
+登入有作用戶錢包地址檢查，要在 sql 目錄下 `create_tables.sql` 檔案，新增用戶的錢包地址。
+登入預設密碼是 `secret`，可自行修改。
+
+### 4. 建立映像檔並啟動服務
 
 ```bash
 docker compose up -d
 ```
 
-### 4. API 服務預設監聽 8080 port
+### 5. API 服務預設監聽 8080 port
 
 - http://localhost:8080
 
-### 5. 健康檢查
+### 6. 健康檢查
 
 - http://localhost:8080/healthz
 
