@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/redis/go-redis/v9"
 	"github.com/wkchen007/nftweb-back/internal/ethcli"
 	"github.com/wkchen007/nftweb-back/internal/nft"
 	"github.com/wkchen007/nftweb-back/internal/repository"
@@ -24,6 +25,8 @@ type application struct {
 	nft       *nft.Handlers
 	amqpURL   string
 	Amqp      *amqp.Connection
+	redisURL  string
+	Redis     *redis.Client
 }
 
 func main() {
@@ -42,6 +45,7 @@ func main() {
 	flag.StringVar(&app.httpAddr, "httpAddr", defaultAddr, "HTTP network address")
 	flag.StringVar(&app.DSN, "dsn", "host=postgres port=5432 user=postgres password=postgres dbname=nftweb sslmode=disable timezone=UTC connect_timeout=5", "Postgres connection string")
 	flag.StringVar(&app.amqpURL, "amqpURL", "amqp://guest:guest@rabbitmq:5672/", "AMQP server URL")
+	flag.StringVar(&app.redisURL, "redisURL", "redis:6379", "Redis server URL")
 	flag.Parse()
 
 	// connect to the databases
@@ -59,6 +63,13 @@ func main() {
 	}
 	defer app.Amqp.Close()
 
+	// 連線到 Redis
+	app.Redis, err = app.connectToRedis()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer app.Redis.Close()
+
 	// 讀取 JWT 相關設定
 	app.auth = Auth{
 		Issuer:        os.Getenv("JWT_ISSUER"),
@@ -69,6 +80,7 @@ func main() {
 		CookiePath:    "/",
 		CookieName:    "refresh_token",
 		CookieDomain:  os.Getenv("COOKIE_DOMAIN"),
+		RDB:           app.Redis,
 	}
 	log.Printf("JWT config: issuer=%s, audience=%s, cookie_domain=%s", app.auth.Issuer, app.auth.Audience, app.auth.CookieDomain)
 

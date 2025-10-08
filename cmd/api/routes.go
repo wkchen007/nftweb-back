@@ -17,14 +17,14 @@ func (app *application) routes() http.Handler {
 	mux.Get("/", app.Home)
 	mux.Get("/healthz", app.healthzHandler)
 	mux.Post("/authenticate", app.authenticate)
-	mux.Get("/logout", app.logout)
+	mux.Post("/logout", app.logout)
 	mux.Get("/demo", app.AllNFTs)
 
 	mux.Route("/wallet", func(mux chi.Router) {
 		mux.Use(app.authRequired)
 		mux.Post("/useSigner", app.PostWalletUseSigner)
-		mux.Get("/address", app.GetWalletAddress)
-		mux.Get("/balance", app.GetWalletBalance)
+		mux.Post("/address", app.GetWalletAddress)
+		mux.Post("/balance", app.GetWalletBalance)
 		mux.Post("/transfer", app.PostWalletTransfer)
 	})
 

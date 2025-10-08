@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type Auth struct {
@@ -19,6 +21,7 @@ type Auth struct {
 	CookieDomain  string
 	CookiePath    string
 	CookieName    string
+	RDB           *redis.Client
 }
 
 type jwtUser struct {
@@ -39,6 +42,8 @@ type Claims struct {
 func (j *Auth) GenerateTokenPair(user *jwtUser) (TokenPairs, error) {
 	// Create a token
 	token := jwt.New(jwt.SigningMethodHS256)
+	accessJTI := fmt.Sprintf("acc-%d-%d", user.ID, time.Now().UnixNano())
+	refreshJTI := fmt.Sprintf("ref-%d-%d", user.ID, time.Now().UnixNano())
 
 	// Set the claims
 	claims := token.Claims.(jwt.MapClaims)
@@ -48,6 +53,7 @@ func (j *Auth) GenerateTokenPair(user *jwtUser) (TokenPairs, error) {
 	claims["iss"] = j.Issuer
 	claims["iat"] = time.Now().UTC().Unix()
 	claims["typ"] = "JWT"
+	claims["jti"] = accessJTI
 
 	// Set the expiry for JWT
 	claims["exp"] = time.Now().UTC().Add(j.TokenExpiry).Unix()
@@ -66,11 +72,26 @@ func (j *Auth) GenerateTokenPair(user *jwtUser) (TokenPairs, error) {
 
 	// Set the expiry for the refresh token
 	refreshTokenClaims["exp"] = time.Now().UTC().Add(j.RefreshExpiry).Unix()
+	refreshTokenClaims["jti"] = refreshJTI
 
 	// Create signed refresh token
 	signedRefreshToken, err := refreshToken.SignedString([]byte(j.Secret))
 	if err != nil {
 		return TokenPairs{}, err
+	}
+
+	// 寫入 Redis（allowlist）
+	ctx := context.Background()
+	if j.RDB != nil {
+		// 只存 JTI 即可，值可放 userID 或 "ok"
+		if err := j.RDB.Set(ctx, "access:"+accessJTI, user.ID, j.TokenExpiry).Err(); err != nil {
+			return TokenPairs{}, fmt.Errorf("redis set access jti: %w", err)
+		}
+		if err := j.RDB.Set(ctx, "refresh:"+refreshJTI, user.ID, j.RefreshExpiry).Err(); err != nil {
+			_ = j.RDB.Del(ctx, "access:"+accessJTI).Err()
+			return TokenPairs{}, fmt.Errorf("redis set refresh jti: %w", err)
+		}
+		log.Printf("stored jti in redis: %s", claims["jti"])
 	}
 
 	// Create TokenPairs and populate with signed tokens
@@ -162,7 +183,55 @@ func (j *Auth) GetTokenFromHeaderAndVerify(w http.ResponseWriter, r *http.Reques
 		return "", nil, fmt.Errorf("invalid issuer")
 	}
 
+	if len(claims.Audience) == 0 || claims.Audience[0] != j.Audience {
+		return "", nil, fmt.Errorf("invalid audience")
+	}
+
 	//log.Printf("claims: %+v", claims)
 
+	// Redis 檢查（allowlist & revoke）
+	if j.RDB != nil {
+		ctx := context.Background()
+		jti := claims.ID
+		if jti == "" {
+			return "", nil, fmt.Errorf("missing jti")
+		}
+
+		// 是否被撤銷？
+		revoked, err := j.RDB.Exists(ctx, "revoked:"+jti).Result()
+		if err != nil {
+			return "", nil, fmt.Errorf("redis error: %w", err)
+		}
+		if revoked == 1 {
+			return "", nil, fmt.Errorf("token revoked")
+		}
+
+		// 是否在 allowlist？
+		allowed, err := j.RDB.Exists(ctx, "access:"+jti).Result()
+		if err != nil {
+			return "", nil, fmt.Errorf("redis error: %w", err)
+		}
+		if allowed != 1 {
+			return "", nil, fmt.Errorf("token not in allowlist")
+		}
+	}
+
 	return token, claims, nil
+}
+
+// 登出：撤銷 access token
+func (j *Auth) RevokeAccessToken(jti string, exp time.Time) error {
+	if j.RDB == nil {
+		return nil
+	}
+	ctx := context.Background()
+	ttl := time.Until(exp)
+	if ttl <= 0 {
+		ttl = time.Minute // 防呆
+	}
+	pipe := j.RDB.TxPipeline()
+	pipe.Set(ctx, "revoked:"+jti, 1, ttl)
+	pipe.Del(ctx, "access:"+jti) // 從 allowlist 移除，立即失效
+	_, err := pipe.Exec(ctx)
+	return err
 }

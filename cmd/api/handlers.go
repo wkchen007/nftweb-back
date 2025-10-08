@@ -99,6 +99,16 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) logout(w http.ResponseWriter, r *http.Request) {
+	// 從 Authorization 取 access，解析拿到 jti 與 exp
+	_, claims, err := app.auth.GetTokenFromHeaderAndVerify(w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if claims != nil && claims.ID != "" && claims.ExpiresAt != nil {
+		_ = app.auth.RevokeAccessToken(claims.ID, claims.ExpiresAt.Time)
+		log.Printf("revoked access jti: %s", claims.ID)
+	}
 	http.SetCookie(w, app.auth.GetExpiredRefreshCookie())
 	w.WriteHeader(http.StatusAccepted)
 }
