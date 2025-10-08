@@ -18,10 +18,10 @@ Go 語言開發的 NFT Web API 後端專案，使用 Docker 部署。
 
 ## API 功能
 
-### 抽獎商品查詢
+### 商品查詢
 
 - 查詢抽獎商品
-	- `GET /demo` 回傳所有 NFT 商品資訊
+	- `GET /demo` 回傳所有 NFT 抽獎商品資訊
 
 ### NFT 抽獎功能
 
@@ -67,7 +67,7 @@ docker compose up -d
 
 ## 相關專案
 
-- 前端專案 [nftweb-frontend](https://github.com/wkchen/nftweb-frontend)
+- 前端專案 [nftweb-front](https://github.com/wkchen007/nftweb-front)
 
 ## 授權
 
