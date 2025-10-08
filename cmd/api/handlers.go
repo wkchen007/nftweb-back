@@ -70,6 +70,11 @@ func (app *application) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if app.ethClient.From().Hex() != user.WalletAddress {
+		app.errorJSON(w, fmt.Errorf("wallet address not match"), http.StatusBadRequest)
+		return
+	}
+
 	// create a jwt user
 	u := jwtUser{
 		ID:        user.ID,
