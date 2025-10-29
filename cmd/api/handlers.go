@@ -115,7 +115,9 @@ func (app *application) logout(w http.ResponseWriter, r *http.Request) {
 		log.Printf("revoked access jti: %s", claims.ID)
 	}
 	http.SetCookie(w, app.auth.GetExpiredRefreshCookie())
-	w.WriteHeader(http.StatusAccepted)
+	//w.WriteHeader(http.StatusAccepted)
+	w.Header().Set("Location", "http://localhost:3000/login")
+	w.WriteHeader(http.StatusFound)
 }
 
 type LogPayload struct {
